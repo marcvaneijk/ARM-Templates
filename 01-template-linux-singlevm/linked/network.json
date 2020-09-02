@@ -41,7 +41,7 @@
             }
         },
         {
-            "name": "[parameters('names').lbPubIp]",
+            "name": "[parameters('names').pubIp]",
             "type": "Microsoft.Network/publicIPAddresses",
             "location": "[resourceGroup().location]",
             "apiVersion": "2020-05-01",

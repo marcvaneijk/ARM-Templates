@@ -39,7 +39,7 @@
                     ]
                 },
                 "protectedSettings": {
-                    "commandToExecute": "[concat('/bin/bash config.sh ', parameters('credentials').guid, ' ',reference(concat('Microsoft.Network/publicIPAddresses/', parameters('names').lbPubIp), '2016-03-30').dnsSettings.fqdn)]"
+                    "commandToExecute": "[concat('/bin/bash config.sh ', parameters('credentials').guid, ' ',reference(concat('Microsoft.Network/publicIPAddresses/', parameters('names').pubIp), '2016-03-30').dnsSettings.fqdn)]"
                 }
             }
         }

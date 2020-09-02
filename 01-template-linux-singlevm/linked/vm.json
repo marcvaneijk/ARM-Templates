@@ -43,8 +43,9 @@
             }
         },
         {
-            "type": "Microsoft.Compute/virtualMachines",
             "name": "[parameters('names').vm]",
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2019-07-01",
             "location": "[resourceGroup().location]",
             "dependsOn": [
                 "[concat(parameters('names').vm, '-vnic')]"
