@@ -68,9 +68,9 @@
                 },
                 "subnets": [
                     {
-                        "name": "[parameters('names').subnetMaster]",
+                        "name": "[parameters('names').subnet]",
                         "properties": {
-                            "addressPrefix": "[parameters('config').master.subnetPrefix]",
+                            "addressPrefix": "[parameters('config').subnetPrefix]",
                             "networkSecurityGroup": {
                                 "id": "[resourceId('Microsoft.Network/networkSecurityGroups',parameters('names').nsg)]"
                             }
