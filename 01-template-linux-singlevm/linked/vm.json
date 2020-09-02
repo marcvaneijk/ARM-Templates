@@ -36,6 +36,9 @@
                             "privateIPAllocationMethod": "Dynamic",
                             "subnet": {
                                 "id": "[concat(resourceId('Microsoft.Network/virtualNetworks',parameters('names').vNet),'/subnets/',parameters('names').subnet)]"
+                            },
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', parameters('names').pubip)]"
                             }
                         }
                     }
@@ -70,7 +73,7 @@
                     }
                 },
                 "storageProfile": {
-                    "imageReference":"[parameters('config').imageReference]",
+                    "imageReference": "[parameters('config').imageReference]",
                     "osDisk": {
                         "name": "[concat(parameters('names').vm,'-osdisk')]",
                         "createOption": "FromImage",
@@ -85,7 +88,7 @@
                     ]
                 }
             }
-        }        
+        }
     ],
     "outputs": {
     }
