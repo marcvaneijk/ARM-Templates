@@ -70,7 +70,7 @@
         },
         "artifactsLocation": {
             "type": "string",
-            "defaultValue": "https://raw.githubusercontent.com/marcvaneijk/arm-templates/master/01-linux-single-vm/",
+            "defaultValue": "https://raw.githubusercontent.com/marcvaneijk/arm-templates/main/01-linux-single-vm/",
             "metadata": {
                 "description": "Location of templates, scripts and other artifacts"
             }
