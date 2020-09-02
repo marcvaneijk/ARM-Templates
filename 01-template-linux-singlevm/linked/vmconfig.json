@@ -1,56 +1,48 @@
 {
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
-    "apiProfile": "2018-03-01-hybrid",
     "parameters": {
         "names": {
             "type": "object",
             "metadata": {
-                "description": "Names object from master template"
+                "description": "Names object from main template"
+            }
+        },
+        "credentials": {
+            "type": "secureObject",
+            "metadata": {
+                "description": "Secure credential object from main template"
             }
         },
         "config": {
             "type": "object",
             "metadata": {
-                "description": "Config object from master template"
+                "description": "Config object from main template"
             }
         }
     },
     "variables": {},
     "resources": [
         {
-            "name": "[parameters('names').nsg]",
-            "type": "Microsoft.Network/networkSecurityGroups",
+            "name": "[concat(parameters('names').vm, '/config')]",
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "apiVersion": "2019-07-01",
             "location": "[resourceGroup().location]",
             "properties": {
-                "securityRules": [
-                    {
-                        "name": "rule1",
-                        "properties": {
-                            "protocol": "*",
-                            "sourcePortRange": "*",
-                            "destinationPortRange": "*",
-                            "sourceAddressPrefix": "*",
-                            "destinationAddressPrefix": "*",
-                            "access": "Allow",
-                            "priority": 101,
-                            "direction": "Inbound"
-                        }
-                    }
-                ]
-            }
-        },
-        {
-            "name": "[parameters('names').lbPubIp]",
-            "type": "Microsoft.Network/publicIPAddresses",
-            "location": "[resourceGroup().location]",
-            "properties": {
-                "publicIPAllocationMethod": "Dynamic",
-                "dnsSettings": {
-                    "domainNameLabel": "[concat('a',uniqueString(resourceGroup().id))]"
+                "publisher": "Microsoft.Azure.Extensions",
+                "type": "CustomScript",
+                "typeHandlerVersion": "2.0",
+                "autoUpgradeMinorVersion": true,
+                "settings": {
+                    "fileUris": [
+                        "[uri(parameters('config').artifactsLocation,'scripts/config.sh')]"
+                    ]
+                },
+                "protectedSettings": {
+                    "commandToExecute": "[concat('/bin/bash config.sh ', parameters('credentials').guid, ' ',reference(concat('Microsoft.Network/publicIPAddresses/', parameters('names').lbPubIp), '2016-03-30').dnsSettings.fqdn)]"
                 }
             }
-        }   
+        }
     ],
     "outputs": {
     }

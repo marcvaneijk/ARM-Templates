@@ -5,13 +5,13 @@
         "names": {
             "type": "object",
             "metadata": {
-                "description": "Names object from master template"
+                "description": "Names object from main template"
             }
         },
         "config": {
             "type": "object",
             "metadata": {
-                "description": "Config object from master template"
+                "description": "Config object from main template"
             }
         }
     },
