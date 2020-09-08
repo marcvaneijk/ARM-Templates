@@ -1,0 +1,128 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "names": {
+            "type": "object",
+            "metadata": {
+                "description": "Names object from main template"
+            }
+        },
+        "credentials": {
+            "type": "secureObject",
+            "metadata": {
+                "description": "Secure credential object from main template"
+            }
+        },
+        "config": {
+            "type": "object",
+            "metadata": {
+                "description": "Config object from main template"
+            }
+        }
+    },
+    "variables": {},
+    "resources": [
+         {
+            "name": "[parameters('names').avSet]",
+            "type": "Microsoft.Compute/availabilitySets",
+            "apiVersion": "2019-07-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "platformFaultDomainCount": 2,
+                "platformUpdateDomainCount": 2
+            },
+            "sku": {
+                "name": "Aligned"
+            }
+        },
+        {
+            "name": "[concat(parameters('names').vm, copyIndex(1), '-vnic', copyIndex(1))]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2020-05-01",
+            "location": "[resourceGroup().location]",
+            "copy": {
+                "name": "nicLoop",
+                "count": "[parameters('config').numberOfVms]"
+            },
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Static",
+                            "privateIPAddress": "[concat(take(parameters('config').subnetPrefix, lastIndexOf(parameters('config').subnetPrefix,'.')),copyIndex(parameters('config').lastIpOctectOffset))]",
+                            "subnet": {
+                                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks',parameters('names').vNet),'/subnets/',parameters('names').subnet)]"
+                            },
+                            "loadBalancerBackendAddressPools": [
+                                {
+                                    "id": "[concat(resourceId('Microsoft.Network/loadBalancers',parameters('names').lb),'/backendAddressPools/',parameters('names').lb,'-be')]"
+                                }
+                            ],
+                            "loadBalancerInboundNatRules": [
+                                {
+                                    "id": "[concat(resourceId('Microsoft.Network/loadBalancers', parameters('names').lb), '/inboundNatRules/','ssh',copyIndex(1))]"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[concat(parameters('names').vm, copyIndex(1))]",
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2019-07-01",
+            "location": "[resourceGroup().location]",
+            "copy": {
+                "name": "vmLoop",
+                "count": "[parameters('config').numberOfVms]"
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('names').vm, copyIndex(1), '-vnic', copyIndex(1)))]",
+                "[concat('Microsoft.Compute/availabilitySets/', parameters('names').avSet)]"
+            ],
+            "properties": {
+                "availabilitySet": {
+                    "id": "[resourceId('Microsoft.Compute/availabilitySets',parameters('names').avSet)]"
+                },
+                "hardwareProfile": {
+                    "vmSize": "[parameters('config').vmsize]"
+                },
+                "osProfile": {
+                    "computerName": "[concat(parameters('names').vm, copyIndex(1))]",
+                    "adminUsername": "[parameters('credentials').adminUsername]",
+                    "linuxConfiguration": {
+                        "disablePasswordAuthentication": true,
+                        "ssh": {
+                            "publicKeys": [
+                                {
+                                    "path": "[concat('/home/', parameters('credentials').adminUsername, '/.ssh/authorized_keys')]",
+                                    "keyData": "[parameters('credentials').sshPublicKey]"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "storageProfile": {
+                    "imageReference": "[parameters('config').imageReference]",
+                    "osDisk": {
+                        "name": "[concat(parameters('names').vm, copyIndex(1),'-osdisk')]",
+                        "createOption": "FromImage",
+                        "caching": "ReadWrite"
+                    }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('names').vm, copyIndex(1), '-vnic', copyIndex(1)))]"
+                        }
+                    ]
+                }
+            }
+        }
+    ],
+    "outputs": {
+    }
+}

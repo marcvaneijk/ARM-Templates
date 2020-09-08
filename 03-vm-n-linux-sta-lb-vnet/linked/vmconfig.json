@@ -1,0 +1,53 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "names": {
+            "type": "object",
+            "metadata": {
+                "description": "Names object from main template"
+            }
+        },
+        "credentials": {
+            "type": "secureObject",
+            "metadata": {
+                "description": "Secure credential object from main template"
+            }
+        },
+        "config": {
+            "type": "object",
+            "metadata": {
+                "description": "Config object from main template"
+            }
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "name": "[concat(parameters('names').vm, copyIndex(1), '/config', copyIndex(1))]",
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "apiVersion": "2019-07-01",
+            "location": "[resourceGroup().location]",
+            "copy": {
+                "name": "extensionLoop",
+                "count": "[parameters('config').numberOfVms]"
+            },
+            "properties": {
+                "publisher": "Microsoft.Azure.Extensions",
+                "type": "CustomScript",
+                "typeHandlerVersion": "2.0",
+                "autoUpgradeMinorVersion": true,
+                "settings": {
+                    "fileUris": [
+                        "[uri(parameters('config').artifactsLocation,'scripts/config.sh')]"
+                    ]
+                },
+                "protectedSettings": {
+                    "commandToExecute": "[concat('/bin/bash config.sh ', parameters('credentials').guid, ' ',copyIndex(1))]"
+                }
+            }
+        }
+    ],
+    "outputs": {
+    }
+}
