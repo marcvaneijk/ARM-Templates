@@ -53,7 +53,7 @@
                             "privateIPAllocationMethod": "Static",
                             "privateIPAddress": "[concat(take(reference(resourceId(parameters('config').existingVnet.ResourceGroupName, 'Microsoft.Network/virtualNetworks/subnets', parameters('config').existingVnet.VnetName, parameters('config').existingVnet.SubnetName), '2018-07-01', 'Full').properties.addressPrefix, add(lastIndexOf(reference(resourceId(parameters('config').existingVnet.ResourceGroupName, 'Microsoft.Network/virtualNetworks/subnets', parameters('config').existingVnet.VnetName, parameters('config').existingVnet.SubnetName), '2018-07-01', 'Full').properties.addressPrefix,'.'),1)),copyIndex(parameters('config').fixedIpLastOctectOffset))]",
                             "subnet": {
-                                "id": "[resourceId(parameters('config').existingVnet.ResourceGroup, 'Microsoft.Network/virtualNetworks/subnets', parameters('config').existingVnet.VnetName, parameters('config').existingVnet.SubnetName)]"
+                                "id": "[resourceId(parameters('config').existingVnet.ResourceGroupName, 'Microsoft.Network/virtualNetworks/subnets', parameters('config').existingVnet.VnetName, parameters('config').existingVnet.SubnetName)]"
                             },
                             "loadBalancerBackendAddressPools": [
                                 {
