@@ -25,7 +25,7 @@
         },
         "artifactsLocation": {
             "type": "string",
-            "defaultValue": "https://raw.githubusercontent.com/marcvaneijk/arm-templates/main/01-template-linux-singlevm/",
+            "defaultValue": "https://raw.githubusercontent.com/marcvaneijk/arm-templates/main/01-vm-1-linux-dyn-vnet/",
             "metadata": {
                 "description": "Location of templates, scripts and other artifacts"
             }
