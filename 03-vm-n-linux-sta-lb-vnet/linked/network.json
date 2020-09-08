@@ -143,13 +143,13 @@
             }
         },
         {
-            "name": "[concat(parameters('names').lb, '/', 'sshMaster', copyIndex(1))]",
+            "name": "[concat(parameters('names').lb, '/', 'ssh', copyIndex(1))]",
             "type": "Microsoft.Network/loadBalancers/inboundNatRules",
             "apiVersion": "2020-05-01",
             "location": "[resourceGroup().location]",
             "copy": {
-                "name": "lbNatLoopMaster",
-                "count": "[parameters('config').master.count]"
+                "name": "lbNatLoop",
+                "count": "[parameters('config').numberOfVms]"
             },
             "dependsOn": [
                 "[concat('Microsoft.Network/loadBalancers/', parameters('names').lb)]"
