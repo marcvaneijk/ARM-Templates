@@ -94,7 +94,7 @@
                 "version":"latest"
             },
             "existingVnet": {
-                "ResourceGroup": "[parameters('existingVnetResourceGroupName')]",
+                "ResourceGroupName": "[parameters('existingVnetResourceGroupName')]",
                 "VnetName": "[parameters('existingVnetName')]",
                 "SubnetName": "[parameters('existingSubnetName')]"
             }

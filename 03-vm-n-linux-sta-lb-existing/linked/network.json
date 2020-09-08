@@ -140,7 +140,7 @@
         }           
     ],
     "outputs": {
-        "existinSubnetPrefix" :  {
+        "existingSubnetPrefix" :  {
             "type": "string",
             "value": "[reference(resourceId(parameters('config').existingVnet.ResourceGroupName, 'Microsoft.Network/virtualNetworks/subnets', parameters('config').existingVnet.VnetName, parameters('config').existingVnet.SubnetName), '2018-07-01', 'Full').properties.addressPrefix]"
         }
