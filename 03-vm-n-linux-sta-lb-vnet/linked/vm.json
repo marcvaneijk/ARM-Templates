@@ -51,7 +51,7 @@
                         "name": "ipconfig1",
                         "properties": {
                             "privateIPAllocationMethod": "Static",
-                            "privateIPAddress": "[concat(take(parameters('config').subnetPrefix, lastIndexOf(parameters('config').subnetPrefix,'.')),copyIndex(parameters('config').lastIpOctectOffset))]",
+                            "privateIPAddress": "[concat(take(parameters('config').subnetPrefix, lastIndexOf(parameters('config').subnetPrefix,'.')),add(copyIndex(parameters('config').lastIpOctectOffset),1))]",
                             "subnet": {
                                 "id": "[concat(resourceId('Microsoft.Network/virtualNetworks',parameters('names').vNet),'/subnets/',parameters('names').subnet)]"
                             },

@@ -170,7 +170,7 @@
     "outputs": {
         "octetReplacement":{
             "type": "string",
-            "value":"[concat(take(parameters('config').subnetPrefix, lastIndexOf(parameters('config').subnetPrefix,'.')),parameters('config').lastIpOctectOffset)]"
+            "value":"[concat(take(parameters('config').subnetPrefix, lastIndexOf(parameters('config').subnetPrefix,'.')),add(parameters('config').lastIpOctectOffset,1))]"
         }
     }
 }
