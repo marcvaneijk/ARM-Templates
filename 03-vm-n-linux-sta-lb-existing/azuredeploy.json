@@ -32,7 +32,25 @@
                 "description": "Number of VMs to deploy (max 10 to limit cost)"
             }
         },
-        "fixedIpLastOctectOffset" :{
+        "existingVnetResourceGroupName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the resourceGroup for the existing virtual network to deploy the scale set into."
+            }
+        },
+        "existingVnetName": {
+            "type": "string",
+            "metadata": {
+                "description": "vName of the existing virtual network to deploy the scale set into."
+            }
+        },
+        "existingSubnetName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the existing subnet to deploy the scale set into."
+            }
+        },
+        "lastIpOctectOffset" :{
             "type": "int",
             "defaultValue": 10,
             "minValue": 1,
@@ -43,7 +61,7 @@
         },
         "artifactsLocation": {
             "type": "string",
-            "defaultValue": "https://raw.githubusercontent.com/marcvaneijk/arm-templates/main/03-vm-n-linux-sta-lb-vnet/",
+            "defaultValue": "https://raw.githubusercontent.com/marcvaneijk/arm-templates/main/03-vm-n-linux-sta-lb-existing/",
             "metadata": {
                 "description": "Location of templates, scripts and other artifacts"
             }
@@ -66,16 +84,19 @@
         },
         "config": {
             "artifactsLocation": "[parameters('artifactsLocation')]",
-            "addressPrefix": "10.0.0.0/16",
-            "subnetPrefix": "10.0.1.0/24",
             "numberOfVms": "[parameters('numberOfVms')]",
-            "fixedIpLastOctectOffset":"[parameters('fixedIpLastOctectOffset')]",
+            "fixedIpLastOctectOffset":"[parameters('lastIpOctectOffset')]",
             "vmsize": "Standard_F2s_v2",
             "imageReference":{
                 "publisher":"Canonical",
                 "offer":"UbuntuServer",
                 "sku":"18.04-LTS",
                 "version":"latest"
+            },
+            "existingVnet": {
+                "ResourceGroup": "[parameters('existingVnetResourceGroupName')]",
+                "VnetName": "[parameters('existingVnetName')]",
+                "SubnetName": "[parameters('existingSubnetName')]"
             }
         }
     },

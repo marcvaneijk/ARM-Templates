@@ -1,0 +1,148 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "names": {
+            "type": "object",
+            "metadata": {
+                "description": "Names object from main template"
+            }
+        },
+        "config": {
+            "type": "object",
+            "metadata": {
+                "description": "Config object from main template"
+            }
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "name": "[parameters('names').nsg]",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2020-05-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "rule1",
+                        "properties": {
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 101,
+                            "direction": "Inbound"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[parameters('names').pubIp]",
+            "type": "Microsoft.Network/publicIPAddresses",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2020-05-01",
+            "properties": {
+                "publicIPAllocationMethod": "Dynamic",
+                "dnsSettings": {
+                    "domainNameLabel": "[concat('a',uniqueString(resourceGroup().id))]"
+                }
+            }
+        },
+        {
+            "name": "[parameters('names').lb]",
+            "type": "Microsoft.Network/loadBalancers",
+            "apiVersion": "2020-05-01",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[parameters('names').pubIp]"
+            ],
+            "properties": {
+                "frontendIPConfigurations": [
+                    {
+                        "name": "[concat(parameters('names').lb,'-fe')]",
+                        "properties": {
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses',parameters('names').pubIp)]"
+                            }
+                        }
+                    }
+                ],
+                "backendAddressPools": [
+                    {
+                        "name": "[concat(parameters('names').lb,'-be')]"
+                    }
+                ],
+                "loadBalancingRules": [
+                    {
+                        "name": "api",
+                        "properties": {
+                            "provisioningState": "Succeeded",
+                            "frontendIPConfiguration": {
+                                "id": "[concat(resourceId('Microsoft.Network/loadBalancers',parameters('names').lb),'/frontendIPConfigurations/',parameters('names').lb,'-fe')]"
+                            },
+                            "frontendPort": 8080,
+                            "backendPort": 8080,
+                            "enableFloatingIP": false,
+                            "idleTimeoutInMinutes": 4,
+                            "protocol": "Tcp",
+                            "enableTcpReset": false,
+                            "loadDistribution": "Default",
+                            "backendAddressPool": {
+                                "id": "[concat(resourceId('Microsoft.Network/loadBalancers', parameters('names').lb), concat('/backendAddressPools/', parameters('names').lb, '-be'))]"
+                            },
+                            "probe": {
+                                "id": "[concat(resourceId('Microsoft.Network/loadBalancers', parameters('names').lb), '/probes/api')]"
+                            }
+                        }
+                    }
+                ],
+                "probes": [
+                    {
+                        "name": "api",
+                        "properties": {
+                            "protocol": "Tcp",
+                            "port": 8080,
+                            "intervalInSeconds": 5,
+                            "numberOfProbes": 2
+                        }
+                    }
+                ],
+                "outboundRules": []
+            }
+        },
+        {
+            "name": "[concat(parameters('names').lb, '/', 'ssh', copyIndex(1))]",
+            "type": "Microsoft.Network/loadBalancers/inboundNatRules",
+            "apiVersion": "2020-05-01",
+            "location": "[resourceGroup().location]",
+            "copy": {
+                "name": "lbNatLoop",
+                "count": "[parameters('config').numberOfVms]"
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Network/loadBalancers/', parameters('names').lb)]"
+            ],
+            "properties": {
+                "frontendIPConfiguration": {
+                    "id": "[concat(resourceId('Microsoft.Network/loadBalancers',parameters('names').lb),'/frontendIPConfigurations/',parameters('names').lb,'-fe')]"
+                },
+                "protocol": "Tcp",
+                "frontendPort": "[copyIndex(22001)]",
+                "backendPort": 22,
+                "enableFloatingIP": false,
+                "idleTimeoutInMinutes": 4,
+                "enableTcpReset": false
+            }
+        }           
+    ],
+    "outputs": {
+        "existinSubnetPrefix" :  {
+            "type": "string",
+            "value": "[reference(resourceId(parameters('config').existingVnet.ResourceGroupName, 'Microsoft.Network/virtualNetworks/subnets', parameters('config').existingVnet.VnetName, parameters('config').existingVnet.SubnetName), '2018-07-01', 'Full').properties.addressPrefix]"
+        }
+    }
+}
