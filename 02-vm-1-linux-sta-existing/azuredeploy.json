@@ -1,0 +1,165 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "adminUsername": {
+            "type": "string",
+            "metadata": {
+                "description": "The name of the Administrator of the new VMs"
+            },
+            "defaultValue": "vmadmin"
+        },
+        "sshPublicKey": {
+            "type": "securestring",
+            "metadata": {
+                "description": "The public key of the SSH keypair"
+            }
+        },
+        "prefix": {
+            "type": "string",
+            "defaultValue": "pre",
+            "maxLength": 5,
+            "metadata": {
+                "description": "resource name prefix"
+            }
+        },
+        "existingVnetResourceGroupName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the resourceGroup for the existing virtual network to deploy the scale set into."
+            }
+        },
+        "existingVnetName": {
+            "type": "string",
+            "metadata": {
+                "description": "vName of the existing virtual network to deploy the scale set into."
+            }
+        },
+        "existingSubnetName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the existing subnet to deploy the scale set into."
+            }
+        },
+        "fixedIpAddress": {
+            "type": "string",
+            "metadata": {
+                "description": "Specify the fixed IP address from the existing vNet address range (it must be available)"
+            },
+            "defaultValue": "10.0.1.10"
+        },
+        "artifactsLocation": {
+            "type": "string",
+            "defaultValue": "https://raw.githubusercontent.com/marcvaneijk/arm-templates/main/02-vm-1-linux-sta-existing/",
+            "metadata": {
+                "description": "Location of templates, scripts and other artifacts"
+            }
+        }
+    },
+    "variables": {
+        "names": {
+            "vNet": "[toLower(concat(parameters('prefix'), '-vnet'))]",
+            "subnet": "[toLower(concat(parameters('prefix'), '-subnet'))]",
+            "nsg": "[toLower(concat(parameters('prefix'), '-nsg'))]",
+            "pubIp": "[toLower(concat(parameters('prefix'), 'pubip'))]",
+            "vm": "[toLower(concat(parameters('prefix'), '-vm'))]"
+        },
+        "credentials": {
+            "adminUsername": "[parameters('adminUsername')]",
+            "sshPublicKey": "[parameters('sshPublicKey')]",
+            "guid": "[replace(guid(resourceGroup().id),'-','')]"
+        },
+        "config": {
+            "artifactsLocation": "[parameters('artifactsLocation')]",
+            "vmsize": "Standard_F2s_v2",
+            "fixedIpAddress": "[parameters('fixedIpAddress')]",
+            "imageReference":{
+                "publisher":"Canonical",
+                "offer":"UbuntuServer",
+                "sku":"18.04-LTS",
+                "version":"latest"
+            },
+            "existingVnet": {
+                "ResourceGroup": "[parameters('existingVnetResourceGroupName')]",
+                "VnetName": "[parameters('existingVnetName')]",
+                "SubnetName": "[parameters('existingSubnetName')]"
+            }
+
+        }
+    },
+    "resources": [
+        {
+            "name": "network",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2019-10-01",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[uri(parameters('artifactsLocation'),'linked/network.json')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "names": {
+                        "value": "[variables('names')]"
+                    },
+                    "config": {
+                        "value": "[variables('config')]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "vm",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2019-10-01",
+            "dependsOn":[
+                "network"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[uri(parameters('artifactsLocation'),'linked/vm.json')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "names": {
+                        "value": "[variables('names')]"
+                    },
+                    "credentials": {
+                        "value": "[variables('credentials')]"
+                    },
+                    "config": {
+                        "value": "[variables('config')]"
+                    }
+                }
+            }
+        },
+                {
+            "name": "vmconfig",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2019-10-01",
+            "dependsOn":[
+                "vm"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[uri(parameters('artifactsLocation'),'linked/vmconfig.json')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "names": {
+                        "value": "[variables('names')]"
+                    },
+                    "credentials": {
+                        "value": "[variables('credentials')]"
+                    },
+                    "config": {
+                        "value": "[variables('config')]"
+                    }
+                }
+            }
+        }
+    ],
+    "outputs": {}
+}
