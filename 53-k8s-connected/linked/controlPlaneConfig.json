@@ -1,0 +1,55 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "apiProfile": "2018-03-01-hybrid",
+    "parameters": {
+        "names": {
+            "type": "object",
+            "metadata": {
+                "description": "Names object from main template"
+            }
+        },
+        "credentials": {
+            "type": "secureObject",
+            "metadata": {
+                "description": "Secure credential object from main template"
+            }
+        },
+        "config": {
+            "type": "object",
+            "metadata": {
+                "description": "Config object from main template"
+            }
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "name": "[concat(parameters('names').vmCP, copyIndex(1), '/config', copyIndex(1))]",
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "location": "[resourceGroup().location]",
+            "copy": {
+                "name": "extensionsControlPlaneLoop",
+                "count": "[parameters('config').controlPlane.count]",
+                "mode": "Serial",
+                "batchSize": 1
+            },
+            "properties": {
+                "publisher": "Microsoft.Azure.Extensions",
+                "type": "CustomScript",
+                "typeHandlerVersion": "2.0",
+                "autoUpgradeMinorVersion": true,
+                "settings": {
+                    "fileUris": [
+                        "[uri(parameters('config').artifactsLocation,'scripts/controlPlane.sh')]"
+                    ]
+                },
+                "protectedSettings": {
+                    "commandToExecute": "[concat('/bin/bash controlPlane.sh ', copyIndex(1), ' ', parameters('credentials').guid, ' ',reference(concat('Microsoft.Network/publicIPAddresses/', parameters('names').lbPubIp), '2016-03-30').dnsSettings.fqdn, ' ', parameters('credentials').adminUsername)]"
+                }
+            }
+        }        
+    ],
+    "outputs": {
+    }
+}

@@ -1,0 +1,168 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "apiProfile": "2018-03-01-hybrid",
+    "parameters": {
+        "names": {
+            "type": "object",
+            "metadata": {
+                "description": "Names object from main template"
+            }
+        },
+        "config": {
+            "type": "object",
+            "metadata": {
+                "description": "Config object from main template"
+            }
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "name": "[parameters('names').nsg]",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "rule1",
+                        "properties": {
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 101,
+                            "direction": "Inbound"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[parameters('names').lbPubIp]",
+            "type": "Microsoft.Network/publicIPAddresses",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "publicIPAllocationMethod": "Dynamic",
+                "dnsSettings": {
+                    "domainNameLabel": "[concat('a',uniqueString(resourceGroup().id))]"
+                }
+            }
+        },
+        {
+            "name": "[parameters('names').vNet]",
+            "type": "Microsoft.Network/virtualNetworks",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[parameters('names').nsg]"
+            ],
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[parameters('config').addressPrefix]"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[parameters('names').subnetCP]",
+                        "properties": {
+                            "addressPrefix": "[parameters('config').controlPlane.subnetPrefix]",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups',parameters('names').nsg)]"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[parameters('names').lb]",
+            "type": "Microsoft.Network/loadBalancers",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[parameters('names').vNet]",
+                "[parameters('names').lbPubIp]"
+            ],
+            "properties": {
+                "frontendIPConfigurations": [
+                    {
+                        "name": "[concat(parameters('names').lb,'-fe')]",
+                        "properties": {
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses',parameters('names').lbPubIp)]"
+                            }
+                        }
+                    }
+                ],
+                "backendAddressPools": [
+                    {
+                        "name": "[concat(parameters('names').lb,'-be')]"
+                    }
+                ],
+                "loadBalancingRules": [
+                    {
+                        "name": "KubernetesAPI",
+                        "properties": {
+                            "provisioningState": "Succeeded",
+                            "frontendIPConfiguration": {
+                                "id": "[concat(resourceId('Microsoft.Network/loadBalancers',parameters('names').lb),'/frontendIPConfigurations/',parameters('names').lb,'-fe')]"
+                            },
+                            "frontendPort": 6443,
+                            "backendPort": 6443,
+                            "enableFloatingIP": false,
+                            "idleTimeoutInMinutes": 4,
+                            "protocol": "Tcp",
+                            "enableTcpReset": false,
+                            "loadDistribution": "Default",
+                            "backendAddressPool": {
+                                "id": "[concat(resourceId('Microsoft.Network/loadBalancers', parameters('names').lb), concat('/backendAddressPools/', parameters('names').lb, '-be'))]"
+                            },
+                            "probe": {
+                                "id": "[concat(resourceId('Microsoft.Network/loadBalancers', parameters('names').lb), '/probes/api')]"
+                            }
+                        }
+                    }
+                ],
+                "probes": [
+                    {
+                        "name": "api",
+                        "properties": {
+                            "protocol": "Tcp",
+                            "port": 6443,
+                            "intervalInSeconds": 5,
+                            "numberOfProbes": 2
+                        }
+                    }
+                ],
+                "outboundRules": []
+            }
+        },
+        {
+            "name": "[concat(parameters('names').lb, '/', 'sshMain', copyIndex(1))]",
+            "type": "Microsoft.Network/loadBalancers/inboundNatRules",
+            "location": "[resourceGroup().location]",
+            "copy": {
+                "name": "lbNatLoopControlPlane",
+                "count": "[parameters('config').controlPlane.count]"
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Network/loadBalancers/', parameters('names').lb)]"
+            ],
+            "properties": {
+                "frontendIPConfiguration": {
+                    "id": "[concat(resourceId('Microsoft.Network/loadBalancers',parameters('names').lb),'/frontendIPConfigurations/',parameters('names').lb,'-fe')]"
+                },
+                "protocol": "Tcp",
+                "frontendPort": "[copyIndex(22001)]",
+                "backendPort": 22,
+                "enableFloatingIP": false,
+                "idleTimeoutInMinutes": 4,
+                "enableTcpReset": false
+            }
+        }        
+    ],
+    "outputs": {
+    }
+}

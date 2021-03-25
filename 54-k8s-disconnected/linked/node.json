@@ -1,0 +1,99 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "apiProfile": "2018-03-01-hybrid",
+    "parameters": {
+        "names": {
+            "type": "object",
+            "metadata": {
+                "description": "Names object from main template"
+            }
+        },
+        "credentials": {
+            "type": "secureObject",
+            "metadata": {
+                "description": "Secure credential object from main template"
+            }
+        },
+        "config": {
+            "type": "object",
+            "metadata": {
+                "description": "Config object from main template"
+            }
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "name": "[concat(parameters('names').vmNode, copyIndex(1), '-vnic', copyIndex(1))]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "location": "[resourceGroup().location]",
+            "copy": {
+                "name": "nicNodeLoop",
+                "count": "[parameters('config').node.count]"
+            },
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "subnet": {
+                                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks',parameters('names').vNet),'/subnets/',parameters('names').subnetNode)]"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines",
+            "name": "[concat(parameters('names').vmNode, copyIndex(1))]",
+            "location": "[resourceGroup().location]",
+            "copy": {
+                "name": "vmNodeLoop",
+                "count": "[parameters('config').node.count]"
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('names').vmNode, copyIndex(1), '-vnic', copyIndex(1)))]"
+            ],
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[parameters('config').node.size]"
+                },
+                "osProfile": {
+                    "computerName": "[concat(parameters('names').vmNode, copyIndex(1))]",
+                    "adminUsername": "[parameters('credentials').adminUsername]",
+                    "linuxConfiguration": {
+                        "disablePasswordAuthentication": true,
+                        "ssh": {
+                            "publicKeys": [
+                                {
+                                    "path": "[concat('/home/', parameters('credentials').adminUsername, '/.ssh/authorized_keys')]",
+                                    "keyData": "[parameters('credentials').sshPublicKey]"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "id": "[resourceId(parameters('config').managedImageResourceGroup,'Microsoft.Compute/images', parameters('config').managedImageName)]"
+                    },
+                    "osDisk": {
+                        "createOption": "FromImage"
+                    }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('names').vmNode, copyIndex(1), '-vnic', copyIndex(1)))]"
+                        }
+                    ]
+                }
+            }
+        }
+    ],
+    "outputs": {
+    }
+}

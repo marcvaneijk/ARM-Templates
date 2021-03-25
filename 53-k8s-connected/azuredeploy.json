@@ -1,0 +1,216 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "adminUsername": {
+            "type": "string",
+            "metadata": {
+                "description": "The name of the Administrator of the new VMs"
+            },
+            "defaultValue": "vmadmin"
+        },
+        "sshPublicKey": {
+            "type": "securestring",
+            "metadata": {
+                "description": "The public key of the SSH keypair"
+            }
+        },
+        "numberOfControlPlaneNodes": {
+            "type": "int",
+            "defaultValue": 3,
+            "allowedValues": [1,3,5],
+            "metadata": {
+                "description": "Number of Kubernetes control plane nodes"
+            }
+        },
+        "numberOfNodes": {
+            "type": "int",
+            "defaultValue": 3,
+            "minValue": 1,
+            "metadata": {
+                "description": "Number of Kubernetes nodes"
+            }
+        },
+        "prefix": {
+            "type": "string",
+            "defaultValue": "kube",
+            "metadata": {
+                "description": "dns name prefix"
+            }
+        },
+        "artifactsLocation": {
+            "type": "string",
+            "defaultValue": "https://raw.githubusercontent.com/marcvaneijk/arm-templates/main/53-k8s-connected/",
+            "metadata": {
+                "description": "Location of templates, scripts and other artifacts"
+            }
+        }
+    },
+    "variables": {
+        "names": {
+            "avSet": "[toLower(concat(parameters('prefix'), '-avset'))]",
+            "vNet": "[toLower(concat(parameters('prefix'), '-vnet'))]",
+            "subnetCP": "[toLower(concat(parameters('prefix'), '-subnetCP'))]",
+            "subnetNode": "[toLower(concat(parameters('prefix'), '-subnetNode'))]",
+            "nsg": "[toLower(concat(parameters('prefix'), '-nsg'))]",
+            "lb": "[toLower(concat(parameters('prefix'), '-lb'))]",
+            "lbFe": "[toLower(concat(parameters('prefix'), '-lb-fe'))]",
+            "lbPubIp": "[toLower(concat(parameters('prefix'), '-lb-pubip'))]",
+            "vmCP": "[toLower(concat(parameters('prefix'), '-cp'))]",
+            "vmNode": "[toLower(concat(parameters('prefix'), '-node'))]"
+        },
+        "credentials": {
+            "adminUsername": "[parameters('adminUsername')]",
+            "sshPublicKey": "[parameters('sshPublicKey')]",
+            "guid":"[replace(guid(resourceGroup().id),'-','')]"
+        },
+        "config": {
+            "artifactsLocation":"[parameters('artifactsLocation')]",
+            "addressPrefix": "10.0.0.0/16",
+            "controlPLane": {
+                "count": "[parameters('numberOfControlPlaneNodes')]",
+                "size": "Standard_F2s_v2",
+                "subnetPrefix": "10.0.1.0/24",
+                "ip": [
+                    "10.0.1.11",
+                    "10.0.1.12",
+                    "10.0.1.13",
+                    "10.0.1.14",
+                    "10.0.1.15"
+                ]
+            },
+            "node": {
+                "count": "[parameters('numberOfNodes')]",
+                "size": "Standard_F2s_v2",
+                "subnetPrefix": "10.0.2.0/24"
+            }
+        }
+    },
+    "resources": [
+        {
+            "name": "network",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2015-01-01",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[uri(parameters('artifactsLocation'),'linked/network.json')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "names": {
+                        "value": "[variables('names')]"
+                    },
+                    "config": {
+                        "value": "[variables('config')]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "controlPlane",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2015-01-01",
+            "dependsOn": [
+                "network"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[uri(parameters('artifactsLocation'),'linked/controlPlane.json')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "names": {
+                        "value": "[variables('names')]"
+                    },
+                    "credentials": {
+                        "value": "[variables('credentials')]"
+                    },
+                    "config": {
+                        "value": "[variables('config')]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "node",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2015-01-01",
+            "dependsOn": [
+                "network"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[uri(parameters('artifactsLocation'),'linked/node.json')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "names": {
+                        "value": "[variables('names')]"
+                    },
+                    "credentials": {
+                        "value": "[variables('credentials')]"
+                    },
+                    "config": {
+                        "value": "[variables('config')]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "controlPlaneConfig",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2015-01-01",
+            "dependsOn": [
+                "controlPlane"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[uri(parameters('artifactsLocation'),'linked/controlPlaneConfig.json')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "names": {
+                        "value": "[variables('names')]"
+                    },
+                    "credentials": {
+                        "value": "[variables('credentials')]"
+                    },
+                    "config": {
+                        "value": "[variables('config')]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "nodeconfig",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2015-01-01",
+            "dependsOn": [
+                "controlPlaneConfig"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[uri(parameters('artifactsLocation'),'linked/nodeconfig.json')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "names": {
+                        "value": "[variables('names')]"
+                    },
+                    "credentials": {
+                        "value": "[variables('credentials')]"
+                    },
+                    "config": {
+                        "value": "[variables('config')]"
+                    }
+                }
+            }
+        }
+    ],
+    "outputs": {}
+}

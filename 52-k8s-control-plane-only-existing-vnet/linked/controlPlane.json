@@ -1,0 +1,134 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "apiProfile": "2018-03-01-hybrid",
+    "parameters": {
+        "names": {
+            "type": "object",
+            "metadata": {
+                "description": "Names object from main template"
+            }
+        },
+        "credentials": {
+            "type": "secureObject",
+            "metadata": {
+                "description": "Secure credential object from main template"
+            }
+        },
+        "config": {
+            "type": "object",
+            "metadata": {
+                "description": "Config object from main template"
+            }
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "name": "[parameters('names').avSet]",
+            "type": "Microsoft.Compute/availabilitySets",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "platformFaultDomainCount": 2,
+                "platformUpdateDomainCount": 2
+            },
+            "sku": {
+                "name": "Aligned"
+            }
+        },
+        {
+            "name": "[concat(parameters('names').vmCP, copyIndex(1), '-vnic', copyIndex(1))]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "location": "[resourceGroup().location]",
+            "copy": {
+                "name": "nicControlPlaneLoop",
+                "count": "[parameters('config').controlPlane.count]"
+            },
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Static",
+                            "privateIPAddress": "[parameters('config').controlPlane.fixedIpAddresses[copyIndex()]]",
+                            "subnet": {
+                                "id": "[resourceId(parameters('config').existingVnet.ResourceGroup, 'Microsoft.Network/virtualNetworks/subnets', parameters('config').existingVnet.VnetName, parameters('config').existingVnet.SubnetName)]"
+                            },
+                            "loadBalancerBackendAddressPools": [
+                                {
+                                    "id": "[concat(resourceId('Microsoft.Network/loadBalancers',parameters('names').lb),'/backendAddressPools/',parameters('names').lb,'-be')]"
+                                }
+                            ],
+                            "loadBalancerInboundNatRules": [
+                                {
+                                    "id": "[concat(resourceId('Microsoft.Network/loadBalancers', parameters('names').lb), '/inboundNatRules/','sshMain',copyIndex(1))]"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "networkSecurityGroup":{
+                        "id": "[resourceId('Microsoft.Network/networkSecurityGroups',parameters('names').nsg)]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines",
+            "name": "[concat(parameters('names').vmCP, copyIndex(1))]",
+            "location": "[resourceGroup().location]",
+            "copy": {
+                "name": "vmControlPlaneLoop",
+                "count": "[parameters('config').controlPlane.count]"
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('names').vmCP, copyIndex(1), '-vnic', copyIndex(1)))]",
+                "[concat('Microsoft.Compute/availabilitySets/', parameters('names').avSet)]"
+            ],
+            "properties": {
+                "availabilitySet": {
+                    "id": "[resourceId('Microsoft.Compute/availabilitySets',parameters('names').avSet)]"
+                },
+                "hardwareProfile": {
+                    "vmSize": "[parameters('config').controlPlane.size]"
+                },
+                "osProfile": {
+                    "computerName": "[concat(parameters('names').vmCP, copyIndex(1))]",
+                    "adminUsername": "[parameters('credentials').adminUsername]",
+                    "linuxConfiguration": {
+                        "disablePasswordAuthentication": true,
+                        "ssh": {
+                            "publicKeys": [
+                                {
+                                    "path": "[concat('/home/', parameters('credentials').adminUsername, '/.ssh/authorized_keys')]",
+                                    "keyData": "[parameters('credentials').sshPublicKey]"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "Canonical",
+                        "offer": "UbuntuServer",
+                        "sku": "18.04-LTS",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "name": "[concat(parameters('names').vmCP, copyIndex(1),'-osdisk')]",
+                        "createOption": "FromImage",
+                        "caching": "ReadWrite"
+                    }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('names').vmCP, copyIndex(1), '-vnic', copyIndex(1)))]"
+                        }
+                    ]
+                }
+            }
+        }        
+    ],
+    "outputs": {
+    }
+}

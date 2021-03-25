@@ -1,0 +1,196 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "adminUsername": {
+            "type": "string",
+            "metadata": {
+                "description": "The name of the Administrator of the new VMs"
+            },
+            "defaultValue": "vmadmin"
+        },
+        "sshPublicKey": {
+            "type": "securestring",
+            "metadata": {
+                "description": "The public key of the SSH keypair"
+            }
+        },
+        "numberOfNodes": {
+            "type": "int",
+            "defaultValue": 2,
+            "minValue": 1,
+            "metadata": {
+                "description": "Number of Kubernetes nodes"
+            }
+        },
+        "prefix": {
+            "type": "string",
+            "defaultValue": "kube",
+            "metadata": {
+                "description": "dns name prefix"
+            }
+        },
+        "artifactsLocation": {
+            "type": "string",
+            "defaultValue": "https://raw.githubusercontent.com/marcvaneijk/arm-templates/main/55-k8s-minimal/",
+            "metadata": {
+                "description": "Location of templates, scripts and other artifacts"
+            }
+        }
+    },
+    "variables": {
+        "names": {
+            "vNet": "[toLower(concat(parameters('prefix'), '-vnet'))]",
+            "subnet": "[toLower(concat(parameters('prefix'), '-subnet'))]",
+            "nsg": "[toLower(concat(parameters('prefix'), '-nsg'))]",
+            "pubIp": "[toLower(concat(parameters('prefix'), 'pubip'))]",
+            "vmCP": "[toLower(concat(parameters('prefix'), '-CP'))]",
+            "vmNode": "[toLower(concat(parameters('prefix'), '-node'))]"
+        },
+        "credentials": {
+            "adminUsername": "[parameters('adminUsername')]",
+            "sshPublicKey": "[parameters('sshPublicKey')]",
+            "guid":"[replace(guid(resourceGroup().id),'-','')]"
+        },
+        "config": {
+            "artifactsLocation":"[parameters('artifactsLocation')]",
+            "addressPrefix": "10.0.0.0/16",
+            "subnetPrefix": "10.0.1.0/24",
+            "controlPlane": {
+                "size": "Standard_F2s_v2",
+                "ip": "10.0.1.11"
+            },
+            "node": {
+                "count": "[parameters('numberOfNodes')]",
+                "size": "Standard_F2s_v2"
+            }
+        }
+    },
+    "resources": [
+        {
+            "name": "network",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2015-01-01",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[uri(parameters('artifactsLocation'),'linked/network.json')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "names": {
+                        "value": "[variables('names')]"
+                    },
+                    "config": {
+                        "value": "[variables('config')]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "controlPlane",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2015-01-01",
+            "dependsOn": [
+                "network"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[uri(parameters('artifactsLocation'),'linked/controlPlane.json')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "names": {
+                        "value": "[variables('names')]"
+                    },
+                    "credentials": {
+                        "value": "[variables('credentials')]"
+                    },
+                    "config": {
+                        "value": "[variables('config')]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "node",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2015-01-01",
+            "dependsOn": [
+                "network"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[uri(parameters('artifactsLocation'),'linked/node.json')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "names": {
+                        "value": "[variables('names')]"
+                    },
+                    "credentials": {
+                        "value": "[variables('credentials')]"
+                    },
+                    "config": {
+                        "value": "[variables('config')]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "controlPlaneConfig",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2015-01-01",
+            "dependsOn": [
+                "controlPlane"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[uri(parameters('artifactsLocation'),'linked/controlPlaneConfig.json')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "names": {
+                        "value": "[variables('names')]"
+                    },
+                    "credentials": {
+                        "value": "[variables('credentials')]"
+                    },
+                    "config": {
+                        "value": "[variables('config')]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "nodeconfig",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2015-01-01",
+            "dependsOn": [
+                "controlPlaneConfig"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[uri(parameters('artifactsLocation'),'linked/nodeconfig.json')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "names": {
+                        "value": "[variables('names')]"
+                    },
+                    "credentials": {
+                        "value": "[variables('credentials')]"
+                    },
+                    "config": {
+                        "value": "[variables('config')]"
+                    }
+                }
+            }
+        }
+    ],
+    "outputs": {}
+}
