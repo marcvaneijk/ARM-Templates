@@ -7,10 +7,14 @@ UNIQUE_STRING=$3
 API_LB_ENDPOINT="$4:6443"
 ADMIN_USERNAME=$5
 KUBERNETES_VERSION=$6
+STORAGE_ACCOUNT_NAME=$7
+STORAGE_ACCOUNT_KEY=$8
 POD_SUBNET="10.244.0.0/16"
 # Original overlay YAML has an issue with 1.16 (needs cniVersion 0.2.0). Once source repo is updated remove temp overlay path
-OVERLAY_CONF="https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml"
 KUBEADM_CONF="kubeadm_config.yaml"
+OVERLAY_CONF="https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml"
+CSI_REPO="https://raw.githubusercontent.com/kubernetes-sigs/azurefile-csi-driver/master/deploy"
+STORAGE_CLASS_CONF="storage_class.yaml"
 # Generate a 32 byte key from the unique string
 CERTIFICATE_KEY=$(echo $UNIQUE_STRING | xxd -p -c 32 -l 32)
 # Generate the bootstrap token from the unique string
@@ -25,6 +29,7 @@ echo ${API_LB_ENDPOINT}
 echo ${KUBERNETES_VERSION}
 echo ${POD_SUBNET}
 echo ${OVERLAY_CONF}
+echo ${CSI_REPO}
 echo ${KUBEADM_CONF}
 echo ${CERTIFICATE_KEY}
 echo ${BOOTSTRAP_TOKEN}
@@ -129,12 +134,76 @@ EOF
     && echo "## Pass: Initiale Kubenetes cluster" \
     || { echo "## Fail: failed to initialize Kubernetes cluster" ; exit 1 ; }
 
-  # Apply network overlay
+  echo "===== Apply network overlay ====="
+
   sudo kubectl apply -f ${OVERLAY_CONF} --kubeconfig /etc/kubernetes/admin.conf \
     && echo "## Pass: Applied network overlay" \
     || { echo "## Fail: failed to apply network overlay" ; exit 1 ; }
 
- echo "===== Copy conf files to user context ====="
+  echo "===== Configure Azure Files CSI ====="
+
+  sudo kubectl apply -f ${CSI_REPO}/rbac-csi-azurefile-controller.yaml --kubeconfig /etc/kubernetes/admin.conf \
+    && echo "## Pass: Applied rbac-csi-azurefile-controller.yaml" \
+    || { echo "## Fail: failed to apply rbac-csi-azurefile-controller.yaml" ; exit 1 ; }
+
+  kubectl apply -f ${CSI_REPO}/rbac-csi-azurefile-node.yaml --kubeconfig /etc/kubernetes/admin.conf \
+    && echo "## Pass: Applied rbac-csi-azurefile-node.yaml" \
+    || { echo "## Fail: failed to apply rbac-csi-azurefile-node.yaml" ; exit 1 ; }
+
+  kubectl apply -f ${CSI_REPO}/csi-azurefile-controller.yaml --kubeconfig /etc/kubernetes/admin.conf \
+    && echo "## Pass: Applied csi-azurefile-controller.yaml" \
+    || { echo "## Fail: failed to apply csi-azurefile-controller.yaml" ; exit 1 ; }
+
+  kubectl apply -f ${CSI_REPO}/csi-azurefile-driver.yaml --kubeconfig /etc/kubernetes/admin.conf \
+    && echo "## Pass: Applied csi-azurefile-driver.yaml" \
+    || { echo "## Fail: failed to apply csi-azurefile-driver.yaml" ; exit 1 ; }
+
+  kubectl apply -f ${CSI_REPO}/csi-azurefile-node.yaml --kubeconfig /etc/kubernetes/admin.conf \
+    && echo "## Pass: Applied csi-azurefile-node.yaml" \
+    || { echo "## Fail: failed to apply csi-azurefile-node.yaml" ; exit 1 ; }
+
+  kubectl apply -f ${CSI_REPO}/csi-azurefile-node-windows.yaml --kubeconfig /etc/kubernetes/admin.conf \
+    && echo "## Pass: Applied csi-azurefile-node-windows.yaml" \
+    || { echo "## Fail: failed to apply csi-azurefile-node-windows.yaml" ; exit 1 ; }
+
+  kubectl create secret generic azure-files-csi \
+    --from-literal azurestorageaccountname=${STORAGE_ACCOUNT_NAME} \
+    --from-literal azurestorageaccountkey="${STORAGE_ACCOUNT_KEY}" \
+    --type=Opaque \
+    --kubeconfig /etc/kubernetes/admin.conf \
+    && echo "## Pass: Applied csi-azurefile-node-windows.yaml" \
+    || { echo "## Fail: failed to apply csi-azurefile-node-windows.yaml" ; exit 1 ; }
+
+cat <<EOF >${STORAGE_CLASS_CONF}
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: azurefile-csi
+provisioner: file.csi.azure.com
+allowVolumeExpansion: true
+parameters:
+  csi.storage.k8s.io/provisioner-secret-name: azure-files-csi
+  csi.storage.k8s.io/provisioner-secret-namespace: default
+  csi.storage.k8s.io/node-stage-secret-name: azure-files-csi
+  csi.storage.k8s.io/node-stage-secret-namespace: default
+  csi.storage.k8s.io/controller-expand-secret-name: azure-files-csi
+  csi.storage.k8s.io/controller-expand-secret-namespace: default
+mountOptions:
+  - dir_mode=0777
+  - file_mode=0777
+  - uid=0
+  - gid=0
+  - mfsymlinks
+  - cache=strict  # https://linux.die.net/man/8/mount.cifs
+  - nosharesock  # reduce probability of reconnect race
+  - actimeo=30  # reduce latency for metadata-heavy workload
+EOF
+
+  kubectl apply -f ${STORAGE_CLASS_CONF} --kubeconfig /etc/kubernetes/admin.conf \
+    && echo "## Pass: Applied storage class for Azure Files Csi" \
+    || { echo "## Fail: failed to apply storage class for Azure Files Csi" ; exit 1 ; } 
+
+  echo "===== Copy conf files to user context ====="
 
   mkdir -p /home/$ADMIN_USERNAME/.kube \
     && echo "## Pass: Create .kube folder in home dir" \

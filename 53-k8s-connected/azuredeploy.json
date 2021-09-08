@@ -65,7 +65,8 @@
             "lbFe": "[toLower(concat(parameters('prefix'), '-lb-fe'))]",
             "lbPubIp": "[toLower(concat(parameters('prefix'), '-lb-pubip'))]",
             "vmCP": "[toLower(concat(parameters('prefix'), '-cp'))]",
-            "vmNode": "[toLower(concat(parameters('prefix'), '-node'))]"
+            "vmNode": "[toLower(concat(parameters('prefix'), '-node'))]",
+            "csiStorage": "[concat('files', uniqueString(resourceGroup().id))]"
         },
         "credentials": {
             "adminUsername": "[parameters('adminUsername')]",
@@ -116,12 +117,29 @@
                 }
             }
         },
+                {
+            "name": "storage",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2021-04-01",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[uri(parameters('artifactsLocation'),'linked/storage.json')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "names": {
+                        "value": "[variables('names')]"
+                    }
+                }
+            }
+        },
         {
             "name": "controlPlane",
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2021-04-01",
             "dependsOn": [
-                "network"
+                "network","storage"
             ],
             "properties": {
                 "mode": "Incremental",
