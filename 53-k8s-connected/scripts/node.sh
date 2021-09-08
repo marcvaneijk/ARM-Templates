@@ -4,6 +4,7 @@
 UNIQUE_STRING=$1
 API_LB_ENDPOINT="$2:6443"
 ADMIN_USERNAME=$3
+KUBERNETES_VERSION=$4
 POD_SUBNET="10.244.0.0/16"
 KUBEADM_CONF="kubeadm_config.yaml"
 # Generate a 32 byte key from the unique string
@@ -53,7 +54,7 @@ sudo apt-get update \
   || { echo "## Fail: failed to update package database" ; exit 1 ; }
 
 echo "===== install Kubernetes components ====="
-sudo apt-get install -y kubelet kubeadm kubectl \
+sudo apt-get install -y kubelet=$KUBERNETES_VERSION kubeadm=$KUBERNETES_VERSION kubectl=$KUBERNETES_VERSION \
   && echo "## Pass: Install Kubernetes components" \
   || { echo "## Fail: failed to install Kubernetes components" ; exit 1 ; }
 
@@ -74,19 +75,3 @@ EOF
 sudo kubeadm join --config ${KUBEADM_CONF} \
   && echo "## Pass: Join control plane node to Kubenetes cluster" \
   || { echo "## Fail: failed to join control plane node to Kubernetes cluster" ; exit 1 ; }
-
-
-
-echo "===== Copy conf files to user context ====="
-
-#mkdir -p /home/$ADMIN_USERNAME/.kube \
-#  && echo "## Pass: Create .kube folder in home dir" \
-#  || { echo "## Fail: failed to create .kube folder in home dir" ; exit 1 ; }
-
-#sudo cp -T -v /etc/kubernetes/admin.conf /home/$ADMIN_USERNAME/.kube/config \
-#  && echo "## Pass: Copy admin.conf to .kube" \
-#  || { echo "## Fail: failed to copy admin.conf to .kube" ; exit 1 ; }
-
-#sudo chown $(id -u $ADMIN_USERNAME):$(id -g $ADMIN_USERNAME) /home/$ADMIN_USERNAME/.kube/config \
-#  && echo "## Pass: Set permissions on .kube/config folder" \
-#  || { echo "## Fail: failed to set permissions on .kube/config folder" ; exit 1 ; }

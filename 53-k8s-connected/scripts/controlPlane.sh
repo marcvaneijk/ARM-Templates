@@ -5,10 +5,10 @@ NODE_INDEX=$1
 UNIQUE_STRING=$2
 API_LB_ENDPOINT="$3:6443"
 ADMIN_USERNAME=$4
+KUBERNETES_VERSION=$5
 POD_SUBNET="10.244.0.0/16"
 # Original overlay YAML has an issue with 1.16 (needs cniVersion 0.2.0). Once source repo is updated remove temp overlay path
 OVERLAY_CONF="https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml"
-# OVERLAY_CONF="https://raw.githubusercontent.com/marcvaneijk/flannel/master/Documentation/kube-flannel.yml"
 KUBEADM_CONF="kubeadm_config.yaml"
 # Generate a 32 byte key from the unique string
 CERTIFICATE_KEY=$(echo $UNIQUE_STRING | xxd -p -c 32 -l 32)
@@ -63,7 +63,7 @@ sudo apt-get update \
   || { echo "## Fail: failed to update package database" ; exit 1 ; }
 
 echo "===== install Kubernetes components ====="
-sudo apt-get install -y kubelet kubeadm kubectl \
+sudo apt-get install -y kubelet=$KUBERNETES_VERSION kubeadm=$KUBERNETES_VERSION kubectl=$KUBERNETES_VERSION \
   && echo "## Pass: Install Kubernetes components" \
   || { echo "## Fail: failed to install Kubernetes components" ; exit 1 ; }
 

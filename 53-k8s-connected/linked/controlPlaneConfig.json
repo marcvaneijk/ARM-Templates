@@ -45,7 +45,7 @@
                     ]
                 },
                 "protectedSettings": {
-                    "commandToExecute": "[concat('/bin/bash controlPlane.sh ', copyIndex(1), ' ', parameters('credentials').guid, ' ',reference(concat('Microsoft.Network/publicIPAddresses/', parameters('names').lbPubIp), '2016-03-30').dnsSettings.fqdn, ' ', parameters('credentials').adminUsername)]"
+                    "commandToExecute": "[concat('/bin/bash controlPlane.sh ', copyIndex(1), ' ', parameters('credentials').guid, ' ',reference(concat('Microsoft.Network/publicIPAddresses/', parameters('names').lbPubIp), '2016-03-30').dnsSettings.fqdn, ' ', parameters('credentials').adminUsername, ' ', parameters('config').kubernetesVersion)]"
                 }
             }
         }        

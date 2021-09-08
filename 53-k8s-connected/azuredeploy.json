@@ -1,5 +1,5 @@
 {
-    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
         "adminUsername": {
@@ -38,6 +38,14 @@
                 "description": "dns name prefix"
             }
         },
+        "kubernetesVersion":{
+            "type": "string",
+            "defaultValue": "1.21.4-00",
+            "allowedValues": ["1.21.4-00"],
+            "metadata": {
+                "description": "For version all versions, check https://packages.cloud.google.com/apt/dists/kubernetes-xenial/main/binary-arm64/Packages"
+            }
+        },
         "artifactsLocation": {
             "type": "string",
             "defaultValue": "https://raw.githubusercontent.com/marcvaneijk/arm-templates/main/53-k8s-connected/",
@@ -67,9 +75,10 @@
         "config": {
             "artifactsLocation":"[parameters('artifactsLocation')]",
             "addressPrefix": "10.0.0.0/16",
+            "kubernetesVersion": "[parameters('kubernetesVersion')]",
             "controlPLane": {
                 "count": "[parameters('numberOfControlPlaneNodes')]",
-                "size": "Standard_F2s_v2",
+                "size": "Standard_B2s",
                 "subnetPrefix": "10.0.1.0/24",
                 "ip": [
                     "10.0.1.11",
@@ -81,7 +90,7 @@
             },
             "node": {
                 "count": "[parameters('numberOfNodes')]",
-                "size": "Standard_F2s_v2",
+                "size": "Standard_B2s",
                 "subnetPrefix": "10.0.2.0/24"
             }
         }
@@ -90,7 +99,7 @@
         {
             "name": "network",
             "type": "Microsoft.Resources/deployments",
-            "apiVersion": "2015-01-01",
+            "apiVersion": "2021-04-01",
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
@@ -110,7 +119,7 @@
         {
             "name": "controlPlane",
             "type": "Microsoft.Resources/deployments",
-            "apiVersion": "2015-01-01",
+            "apiVersion": "2021-04-01",
             "dependsOn": [
                 "network"
             ],
@@ -136,7 +145,7 @@
         {
             "name": "node",
             "type": "Microsoft.Resources/deployments",
-            "apiVersion": "2015-01-01",
+            "apiVersion": "2021-04-01",
             "dependsOn": [
                 "network"
             ],
@@ -162,7 +171,7 @@
         {
             "name": "controlPlaneConfig",
             "type": "Microsoft.Resources/deployments",
-            "apiVersion": "2015-01-01",
+            "apiVersion": "2021-04-01",
             "dependsOn": [
                 "controlPlane"
             ],
@@ -188,7 +197,7 @@
         {
             "name": "nodeconfig",
             "type": "Microsoft.Resources/deployments",
-            "apiVersion": "2015-01-01",
+            "apiVersion": "2021-04-01",
             "dependsOn": [
                 "controlPlaneConfig"
             ],
