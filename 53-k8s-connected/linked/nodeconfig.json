@@ -40,11 +40,11 @@
                 "autoUpgradeMinorVersion": true,
                 "settings": {
                     "fileUris": [
-                        "[uri(parameters('config').artifactsLocation,'scripts/node.sh')]"
+                        "[uri(parameters('config').artifactsLocation,'scripts/config.sh')]"
                     ]
                 },
                 "protectedSettings": {
-                    "commandToExecute": "[concat('/bin/bash node.sh ', parameters('credentials').guid, ' ',reference(concat('Microsoft.Network/publicIPAddresses/', parameters('names').lbPubIp), '2020-11-01').dnsSettings.fqdn, ' ', parameters('credentials').adminUsername, ' ', parameters('config').kubernetesVersion)]"
+                    "commandToExecute": "[concat('/bin/bash node.sh node ', copyIndex(1), parameters('credentials').guid, ' ',reference(concat('Microsoft.Network/publicIPAddresses/', parameters('names').lbPubIp), '2020-11-01').dnsSettings.fqdn, ' ', parameters('credentials').adminUsername, ' ', parameters('config').kubernetesVersion)]"
                 }
             }
         }
