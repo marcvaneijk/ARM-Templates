@@ -100,7 +100,7 @@ sudo systemctl restart docker \
   || { echo "## Fail: failed to restart docker" ; exit 1 ; }
 
 
-if [ "$NODE_TYPE" = "controlPlane" && "$NODE_INDEX" = "1" ]; then
+if [[ "$NODE_TYPE" = "controlPlane" && "$NODE_INDEX" = "1" ]]; then
 
   echo "===== Creating the cluster on the first node ====="
 
