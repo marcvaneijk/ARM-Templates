@@ -148,7 +148,7 @@ EOF
     && echo "## Pass: Set permissions on .kube/config folder" \
     || { echo "## Fail: failed to set permissions on .kube/config folder" ; exit 1 ; }
 
-elif [ "$NODE_TYPE" = "controlPlane" ]
+elif [ "$NODE_TYPE" = "controlPlane" ]; then
 
   echo "===== Adding an additional control plane node to the cluster ====="
 
