@@ -1,7 +1,6 @@
 {
-    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
-    "apiProfile": "2018-03-01-hybrid",
     "parameters": {
         "names": {
             "type": "object",
@@ -27,6 +26,7 @@
         {
             "name": "[concat(parameters('names').vmNode, copyIndex(1), '-vnic', copyIndex(1))]",
             "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2020-11-01",
             "location": "[resourceGroup().location]",
             "copy": {
                 "name": "nicNodeLoop",
@@ -49,6 +49,7 @@
         {
             "type": "Microsoft.Compute/virtualMachines",
             "name": "[concat(parameters('names').vmNode, copyIndex(1))]",
+            "apiVersion": "2021-03-01",
             "location": "[resourceGroup().location]",
             "copy": {
                 "name": "vmNodeLoop",

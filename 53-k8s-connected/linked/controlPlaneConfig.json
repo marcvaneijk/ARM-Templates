@@ -1,7 +1,6 @@
 {
-    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
-    "apiProfile": "2018-03-01-hybrid",
     "parameters": {
         "names": {
             "type": "object",
@@ -27,6 +26,7 @@
         {
             "name": "[concat(parameters('names').vmCP, copyIndex(1), '/config', copyIndex(1))]",
             "type": "Microsoft.Compute/virtualMachines/extensions",
+            "apiVersion": "2021-03-01",
             "location": "[resourceGroup().location]",
             "copy": {
                 "name": "extensionsControlPlaneLoop",
@@ -45,7 +45,7 @@
                     ]
                 },
                 "protectedSettings": {
-                    "commandToExecute": "[concat('/bin/bash controlPlane.sh ', copyIndex(1), ' ', parameters('credentials').guid, ' ',reference(concat('Microsoft.Network/publicIPAddresses/', parameters('names').lbPubIp), '2016-03-30').dnsSettings.fqdn, ' ', parameters('credentials').adminUsername, ' ', parameters('config').kubernetesVersion)]"
+                    "commandToExecute": "[concat('/bin/bash controlPlane.sh ', copyIndex(1), ' ', parameters('credentials').guid, ' ',reference(concat('Microsoft.Network/publicIPAddresses/', parameters('names').lbPubIp), '2020-11-01').dnsSettings.fqdn, ' ', parameters('credentials').adminUsername, ' ', parameters('config').kubernetesVersion)]"
                 }
             }
         }        

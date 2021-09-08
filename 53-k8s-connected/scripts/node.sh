@@ -58,6 +58,36 @@ sudo apt-get install -y kubelet=$KUBERNETES_VERSION kubeadm=$KUBERNETES_VERSION 
   && echo "## Pass: Install Kubernetes components" \
   || { echo "## Fail: failed to install Kubernetes components" ; exit 1 ; }
 
+# Fix warning 1
+sudo systemctl enable docker.service \
+  && echo "## Pass: Apply fix for kubeadm init warning" \
+  || { echo "## Fail: failed to apply fix for kubeadm init warning" ; exit 1 ; }
+
+# Fix warning 2
+cat << EOF | sudo tee -a /etc/docker/daemon.json
+{
+  "exec-opts": ["native.cgroupdriver=systemd"],
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "100m"
+  },
+  "storage-driver": "overlay2"
+}
+EOF
+
+sudo mkdir -p /etc/systemd/system/docker.service.d \
+  && echo "## Pass: Apply fix for kubeadm init warning" \
+  || { echo "## Fail: failed to apply fix for kubeadm init warning" ; exit 1 ; }
+
+sudo systemctl daemon-reload \
+  && echo "## Pass: reload daemon" \
+  || { echo "## Fail: failed to reload daemon" ; exit 1 ; }
+
+sudo systemctl restart docker \
+  && echo "## Pass: restart docker" \
+  || { echo "## Fail: failed to restart docker" ; exit 1 ; }
+
+
 
 echo "===== Join node to the cluster ====="
 

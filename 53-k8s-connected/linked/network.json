@@ -1,7 +1,6 @@
 {
-    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
-    "apiProfile": "2018-03-01-hybrid",
     "parameters": {
         "names": {
             "type": "object",
@@ -21,6 +20,7 @@
         {
             "name": "[parameters('names').nsg]",
             "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2020-11-01",
             "location": "[resourceGroup().location]",
             "properties": {
                 "securityRules": [
@@ -43,6 +43,7 @@
         {
             "name": "[parameters('names').lbPubIp]",
             "type": "Microsoft.Network/publicIPAddresses",
+            "apiVersion": "2020-11-01",
             "location": "[resourceGroup().location]",
             "properties": {
                 "publicIPAllocationMethod": "Dynamic",
@@ -54,6 +55,7 @@
         {
             "name": "[parameters('names').vNet]",
             "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2020-11-01",
             "location": "[resourceGroup().location]",
             "dependsOn": [
                 "[parameters('names').nsg]"
@@ -89,6 +91,7 @@
         {
             "name": "[parameters('names').lb]",
             "type": "Microsoft.Network/loadBalancers",
+            "apiVersion": "2020-11-01",
             "location": "[resourceGroup().location]",
             "dependsOn": [
                 "[parameters('names').vNet]",
@@ -151,6 +154,7 @@
         {
             "name": "[concat(parameters('names').lb, '/', 'sshMain', copyIndex(1))]",
             "type": "Microsoft.Network/loadBalancers/inboundNatRules",
+            "apiVersion": "2020-11-01",
             "location": "[resourceGroup().location]",
             "copy": {
                 "name": "lbNatLoopControlPlane",
