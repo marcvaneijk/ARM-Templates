@@ -125,6 +125,9 @@
                         }
                     ]
                 }
+            },
+            "identity": {
+                "type": "SystemAssigned"
             }
         }        
     ],
