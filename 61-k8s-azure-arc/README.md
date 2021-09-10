@@ -1,0 +1,50 @@
+# Upstream Kubernetes Deployment
+- Configured overlay: Flannel
+- Configured Csi: Azure Files
+
+Example Statefulset that uses storage auto provisioning through the configured storage class.
+
+``` yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: statefulset-azurefile
+  labels:
+    app: nginx
+spec:
+  podManagementPolicy: Parallel  # default is OrderedReady
+  serviceName: statefulset-azurefile
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      nodeSelector:
+        "kubernetes.io/os": linux
+      containers:
+        - name: statefulset-azurefile
+          image: mcr.microsoft.com/oss/nginx/nginx:1.19.5
+          command:
+            - "/bin/bash"
+            - "-c"
+            - set -euo pipefail; while true; do echo $(date) >> /mnt/azurefile/outfile; sleep 1; done
+          volumeMounts:
+            - name: persistent-storage
+              mountPath: /mnt/azurefile
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: nginx
+  volumeClaimTemplates:
+    - metadata:
+        name: persistent-storage
+        annotations:
+          volume.beta.kubernetes.io/storage-class: azurefile-csi
+      spec:
+        accessModes: ["ReadWriteMany"]
+        resources:
+          requests:
+            storage: 100Gi
+```

@@ -1,0 +1,55 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "names": {
+            "type": "object",
+            "metadata": {
+                "description": "Names object from main template"
+            }
+        },
+        "credentials": {
+            "type": "secureObject",
+            "metadata": {
+                "description": "Secure credential object from main template"
+            }
+        },
+        "config": {
+            "type": "object",
+            "metadata": {
+                "description": "Config object from main template"
+            }
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "name": "[concat(parameters('names').vmCP, copyIndex(1), '/config', copyIndex(1))]",
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "apiVersion": "2021-03-01",
+            "location": "[resourceGroup().location]",
+            "copy": {
+                "name": "extensionsControlPlaneLoop",
+                "count": "[parameters('config').controlPlane.count]",
+                "mode": "Serial",
+                "batchSize": 1
+            },
+            "properties": {
+                "publisher": "Microsoft.Azure.Extensions",
+                "type": "CustomScript",
+                "typeHandlerVersion": "2.0",
+                "autoUpgradeMinorVersion": true,
+                "settings": {
+                    "fileUris": [
+                        "[uri(parameters('config').artifactsLocation,'scripts/config.sh')]"
+                    ]
+                },
+                "protectedSettings": {
+                    "commandToExecute": "[concat('/bin/bash config.sh controlPlane ', copyIndex(1), ' ', parameters('credentials').guid, ' ',reference(concat('Microsoft.Network/publicIPAddresses/', parameters('names').lbPubIp), '2020-11-01').dnsSettings.fqdn, ' ', parameters('credentials').adminUsername, ' ', parameters('config').kubernetesVersion, ' ', parameters('names').csiStorage, ' ', listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('names').csiStorage), '2019-04-01').keys[0].value)]"
+                }
+            }
+        }        
+    ],
+    "outputs": {
+    }
+}
